@@ -29,36 +29,33 @@ const int FINISH_HEIGHT = 5;            // Height of the 'finish line' rectangle
 //      RECENT_NODES_WINDOW = 1       //
 ////////////////////////////////////////
 
-const double JUMP_SIZE = 3;                 // Maximum distance to jump towards a random point (larger values lead to faster exploration but less optimized paths)
-const double DISK_SIZE = JUMP_SIZE * 3;     // Circle radius around which we fetch nearby nodes to rewire (larger values lead to more optimized paths, but more execution time and may start going backwards)
+const double JUMP_SIZE = 1.5;               // Maximum distance to jump towards a random point (larger values lead to faster exploration but less optimized paths)
+const double DISK_SIZE = JUMP_SIZE * 10;    // Circle radius around which we fetch nearby nodes to rewire (larger values lead to more optimized paths, but more execution time and may start going backwards)
 
 const double CAR_WIDTH = 1.2;               // Width of the car for collision checks (resulting path is the midway path if car width is almost equal to the track width)
-const double CAR_LENGTH = 1.35;                // Length of the car for collision checks (if the length is too small, the car may face the wall and get stuck)
+const double CAR_LENGTH = 1.35;             // Length of the car for collision checks (if the length is too small, the car may face the wall and get stuck)
 
-const int EXTRA_ITERATIONS = 500;       // Extra iterations to keep exploring post success, possibly leading to better paths
+const int EXTRA_ITERATIONS = 500;           // Extra iterations to keep exploring post success, possibly leading to better paths
 
-const int RECENT_NODES_WINDOW = 3;      // Number of furthest nodes to consider expanding, leads to more exploration but also more execution time
-                                        // If this value is too low, the algorithm may get stuck facing a wall
+const int RECENT_NODES_WINDOW = 10;         // Number of furthest nodes to consider expanding, leads to more exploration but also more execution time
+                                            // If this value is too low, the algorithm may get stuck facing a wall
 
-int iterations = 0;                     // Number of iterations
+int iterations = 0;                         // Number of iterations
 
 Point start;
 
-vector<Point> nodes;            // Nodes of the RRT tree
-vector<int> currentPathNodes;   // Nodes of the current best path are stored here
-vector<int> parent, nearby;     // Parent of each node, and nearby nodes for rewiring
-vector<double> cost, jumps;     // Cost of each node, and jump distance to random point
+vector<Point> nodes;                // Nodes of the RRT tree
+vector<int> currentPathNodes;       // Nodes of the current best path are stored here
+vector<int> parent, nearby;         // Parent of each node, and nearby nodes for rewiring
+vector<double> cost, jumps;         // Cost of each node, and jump distance to random point
 int nodeCnt = 0, goalIndex = -1;
 
 sf::CircleShape startingPoint;
 bool pathFound = false;
 
 Track track;
-Point startDirection = {1.0, 0.0}; // Facing right initially I assume
-vector<Point> nodeDirection;       // Stores direction of each node
-
-static vector<pair<double, int>> nodeHeap;
-static int lastNodeCount = 0;
+Point startDirection = {1.0, 0.0};  // Facing right initially I assume
+vector<Point> nodeDirection;        // Stores direction of each node
 
 void initializeTrack() {
     // Initialize the track with blue and yellow cones
@@ -254,6 +251,8 @@ void rewire() {
         int par = lastInserted;
         int cur = nodeIndex;
 
+        double previousPathLength = calculatePathLength();
+
         double newCost = cost[par] + distance(nodes[par], nodes[cur]);
 
         // Check edge and cost improvement, and enforce minimum path length
@@ -268,9 +267,22 @@ void rewire() {
                 }
             }
 
+            // Save the original state before making changes
+            int originalParent = parent[cur];
+            double originalCost = cost[cur];
+            Point originalDirection = nodeDirection[cur];
+
             parent[cur] = par;
             cost[cur] = newCost;
             nodeDirection[cur] = (nodes[cur] - nodes[par]).normalized();
+
+            double resultingPathLength = calculatePathLength(); // Manually calculate the new path length to avoid updating costs of the whole tree every rewire
+            if (resultingPathLength + EPS > previousPathLength) {
+                // If the new path is worse, revert changes
+                parent[cur] = originalParent; // Restore original parent
+                cost[cur] = originalCost;     // Restore original cost
+                nodeDirection[cur] = originalDirection; // Restore original direction
+            }
         }
     }
 }
@@ -320,56 +332,8 @@ int randomIndex(int min, int max) {
     return dist(rng);
 }
 
-// void rebuildHeap() {
-//     nodeHeap.clear();
-//     nodeHeap.reserve(nodeCnt);
-    
-//     // Push all nodes into heap (O(n) time if using make_heap)
-//     for (int i = 0; i < nodeCnt; ++i) {
-//         nodeHeap.emplace_back(cost[i], i);
-//     }
-//     std::make_heap(nodeHeap.begin(), nodeHeap.end());  // O(n) heapify
-
-//     lastNodeCount = nodeCnt;
-// }
-
-// Point pickRandomPoint() {
-//     // Rebuild heap only if new nodes were added
-//     if (nodeCnt != lastNodeCount) {
-//         rebuildHeap();
-//     }
-
-//     // Select top N nodes (RECENT_NODES_WINDOW is small, so this is O(k log n))
-//     vector<int> topNodes;
-//     int k = min(RECENT_NODES_WINDOW, (int)nodeHeap.size());
-//     for (int i = 0; i < k; ++i) {
-//         topNodes.push_back(nodeHeap.front().second);  // Get max element
-//         std::pop_heap(nodeHeap.begin(), nodeHeap.end());  // Move max to back
-//         nodeHeap.pop_back();  // Actually remove it (but we'll rebuild anyway)
-//     }
-
-//     // Restore heap (since we destroyed it)
-//     nodeHeap.clear();
-//     for (int i = 0; i < nodeCnt; ++i) {
-//         nodeHeap.emplace_back(cost[i], i);
-//     }
-//     std::make_heap(nodeHeap.begin(), nodeHeap.end());
-
-//     // Randomly select from top k nodes
-//     int selectedIndex = randomIndex(0, k - 1);
-//     Point base = nodes[topNodes[selectedIndex]];
-    
-//     return base + Point(
-//         randomCoordinate(-JUMP_SIZE, JUMP_SIZE),
-//         randomCoordinate(-JUMP_SIZE, JUMP_SIZE)
-//     );
-// }
-
-
-
-
 void RRT() {
-    Point newPoint, nearestPoint, nextPoint;
+    Point nearestPoint, nextPoint;
     bool updated = false;
     int nearestIndex;
     double minCost;
