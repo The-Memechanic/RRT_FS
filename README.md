@@ -1,8 +1,8 @@
-# RRT* Prototype
+# RRT* Path Finding Algorithm
 
-This is a prototype implementation of the RRT* algorithm for path planning. This code is designed to be run seperately from the main codebase and is intended for testing and development purposes only. The implementation is not optimized for performance or efficiency, but rather focuses on demonstrating the core concepts of the RRT* algorithm.
+This is an implementation of the RRT* algorithm for path planning. This code is designed to be run seperately from the main codebase and is intended for testing and development purposes only.
 
-The code is written in C++ and uses the SFML library for visualization. The implementation includes a simple 2D environment with a simple circular track. 
+The code is written in C++ and uses the SFML library for visualization. The implementation includes a simple 2D environment with some tracks. 
 
 ## Running the Prototype
 
@@ -34,8 +34,8 @@ Finally, execute the compiled program:
 
 ## The Executable
 
-Running the executable will open a window displaying the environment including the track, and the start and goal points. 
+Running the executable will open a window displaying the environment including the track, the start point and the finish line rectangle. 
 
-The RRT* algorithm will then begin to search for a path from the start point to the goal point. The path tree will be displayed in real-time in white, and whenever a new path is found, it will be displayed in red. 
+The RRT* algorithm will then begin to search for a path from the start point until it reaches the rectangle from the opposite side. The path tree will be displayed in real-time in white, and whenever a new path is found, it will be displayed in red. 
 
-The algorithm will continuously run until the window is closed or the execution is stopped. The algorithm will also frequently print out the current path length and the number of iterations to the terminal
+The algorithm will continuously run until a certain number of iterations after the first path is found. The algorithm will also frequently print out the current path length and the number of iterations to the terminal.
