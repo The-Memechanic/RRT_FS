@@ -105,10 +105,25 @@ ftype cross(Point a, Point b) {
 
 /*  Returns a point in the direction of (p2 - p1) vector such that 
     the new point is within a DELTA distance of point1  */
-Point stepNear(Point& p1, ftype DELTA) {
-    // Generate a random angle between 0 and 2 * PI
-    ftype theta = ((ftype)rand() / RAND_MAX) * 2 * M_PI;
-    return Point(p1.x + DELTA * cos(theta), p1.y + DELTA * sin(theta));
+Point stepNear(Point& p1, Point& direction, ftype DELTA) {
+    // Normalize the direction vector
+    Point normalizedDirection = direction.normalized();
+
+    // Define a threshold in degrees
+    ftype thresholdDegrees = 70.0; // You can modify this value as needed
+
+    // Convert the threshold from degrees to radians
+    ftype thresholdRadians = (thresholdDegrees * M_PI) / 180.0;
+
+    // Generate a random angle between -thresholdRadians and thresholdRadians
+    ftype theta = (((ftype)rand() / RAND_MAX) * (2 * thresholdRadians)) - thresholdRadians;
+
+    // Calculate the new direction based on the random angle
+    ftype newX = normalizedDirection.x * cos(theta) - normalizedDirection.y * sin(theta);
+    ftype newY = normalizedDirection.x * sin(theta) + normalizedDirection.y * cos(theta);
+
+    // Scale the new direction by DELTA and add to p1
+    return Point(p1.x + DELTA * newX, p1.y + DELTA * newY);
 }
 
 // Return minimum distance between line segment vw and point p

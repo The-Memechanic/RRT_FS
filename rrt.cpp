@@ -29,15 +29,15 @@ const int FINISH_HEIGHT = 5;            // Height of the 'finish line' rectangle
 //      RECENT_NODES_WINDOW = 1       //
 ////////////////////////////////////////
 
-const double JUMP_SIZE = 1.5;               // Maximum distance to jump towards a random point (larger values lead to faster exploration but less optimized paths)
-const double DISK_SIZE = JUMP_SIZE * 10;    // Circle radius around which we fetch nearby nodes to rewire (larger values lead to more optimized paths, but more execution time and may start going backwards)
+const double JUMP_SIZE = 3;                 // Maximum distance to jump towards a random point (larger values lead to faster exploration but less optimized paths)
+const double DISK_SIZE = JUMP_SIZE * 1;     // Circle radius around which we fetch nearby nodes to rewire (larger values lead to more optimized paths, but more execution time and may start going backwards)
 
 const double CAR_WIDTH = 1.2;               // Width of the car for collision checks (resulting path is the midway path if car width is almost equal to the track width)
 const double CAR_LENGTH = 1.35;             // Length of the car for collision checks (if the length is too small, the car may face the wall and get stuck)
 
 const int EXTRA_ITERATIONS = 500;           // Extra iterations to keep exploring post success, possibly leading to better paths
 
-const int RECENT_NODES_WINDOW = 10;         // Number of furthest nodes to consider expanding, leads to more exploration but also more execution time
+const int RECENT_NODES_WINDOW = 1;          // Number of furthest nodes to consider expanding, leads to more exploration but also more execution time
                                             // If this value is too low, the algorithm may get stuck facing a wall
 
 int iterations = 0;                         // Number of iterations
@@ -355,7 +355,7 @@ void RRT() {
             nearestPoint = nodes[nearestIndex];
         }
 
-        nextPoint = stepNear(nearestPoint, jumps[nearestIndex]); // go forward
+        nextPoint = stepNear(nearestPoint, nodeDirection[nearestIndex],jumps[nearestIndex]); // go forward
 
         if (!isEdgeObstacleFree(nearestPoint, nextPoint)) {
             continue;
@@ -363,8 +363,6 @@ void RRT() {
 
         // Direction biasing
         double dirScore = directionScore(nearestPoint, nextPoint, nodeDirection[nearestIndex]);
-
-        if (dirScore < 0.2) continue; // no going backwards and no super abrupt turns
 
         // Randomly decide to skip this point based on direction score (may not be needed anymore)
         double random = randomCoordinate(0.0, 1.0);
