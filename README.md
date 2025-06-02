@@ -4,11 +4,11 @@ This is an implementation of the RRT* algorithm for path planning. This code is 
 
 The code is written in C++ and uses the SFML library for visualization. The implementation includes a simple 2D environment with some tracks. 
 
-## Running the Prototype
+## Running the Algorithm
 
-To run the prototype, you will need to meet the dependencies listed in the CMakeLists.txt file. The prototype can be run using the following commands:
+To run the algorithm, you will need to meet the dependencies listed in the CMakeLists.txt file. It can be ran using the following commands:
 
-(while in the prototype directory)
+(while in the root directory)
 ```bash
 mkdir build
 cd build
