@@ -30,7 +30,7 @@ const int FINISH_HEIGHT = 5;            // Height of the 'finish line' rectangle
 ////////////////////////////////////////
 
 double JUMP_SIZE = 3;                 // Maximum distance to jump towards a random point (larger values lead to faster exploration but less optimized paths)
-int DISK_SIZE_MULTIPLIER = 1;         // Multiplier for the disk size, which is the radius around a node to search for nearby nodes to rewire
+int DISK_SIZE_MULTIPLIER = 3;         // Multiplier for the disk size, which is the radius around a node to search for nearby nodes to rewire
 double DISK_SIZE = JUMP_SIZE * DISK_SIZE_MULTIPLIER;     // Circle radius around which we fetch nearby nodes to rewire (larger values lead to more optimized paths, but more execution time and may start going backwards)
 
 const double CAR_WIDTH = 1.2;               // Width of the car for collision checks (resulting path is the midway path if car width is almost equal to the track width)
@@ -38,7 +38,7 @@ const double CAR_LENGTH = 1.35;             // Length of the car for collision c
 
 const int EXTRA_ITERATIONS = 500;           // Extra iterations to keep exploring post success, possibly leading to better paths
 
-int RECENT_NODES_WINDOW = 1;          // Number of furthest nodes to consider expanding, leads to more exploration but also more execution time
+int RECENT_NODES_WINDOW = 10;          // Number of furthest nodes to consider expanding, leads to more exploration but also more execution time
                                             // If this value is too low, the algorithm may get stuck facing a wall
 
 int iterations = 0;                         // Number of iterations
@@ -197,14 +197,79 @@ void extractCurrentPath() {
     //cout << endl;
 }
 
-double calculatePathLength() {
+void printPathAsVector() {
+    if (!pathFound || goalIndex == -1) return;
+
+    vector<Point> pathPoints;
+    int current = goalIndex;
+    
+    // Build the vector with the path points
+    while (true) {
+        pathPoints.push_back(nodes[current]);
+        if (current == parent[current]) break;  // Base case
+        current = parent[current];
+    }
+
+    std::reverse(pathPoints.begin(), pathPoints.end());
+
+    std::cout << "PATH_VECTOR: vector<Point> pathPoints = {";
+    std::cout << "{" << pathPoints[0].x << ", " << pathPoints[0].y << "}";
+    for (size_t i = 1; i < pathPoints.size(); ++i) {
+        std::cout << ", {" << pathPoints[i].x << ", " << pathPoints[i].y << "}";
+    }
+    std::cout << "};";
+}
+
+// Math...
+static double angleBetween(const Point& v1, const Point& v2) {
+    double dot = v1.x * v2.x + v1.y * v2.y;
+    double det = v1.x * v2.y - v1.y * v2.x;
+    double angle = std::atan2(det, dot) * 180.0 / M_PI;
+    return std::abs(angle);
+}
+
+double calculateMaxAngleChange() {
     if (!pathFound || goalIndex == -1) return 0.0;
 
-    double totalLength = 0.0;
+    vector<Point> pathPoints;
     int current = goalIndex;
+    
+    // Build the vector with the path points
+    while (true) {
+        pathPoints.push_back(nodes[current]);
+        if (current == parent[current]) break;  // Base case
+        current = parent[current];
+    }
+
+    // Check this just to make sure
+    if (pathPoints.size() < 3) return 0.0;
+
+    double maxAngleChange = 0.0;
+
+    // Calculate angles between consecutive segments
+    for (size_t i = 1; i < currentPathNodes.size() - 1; i++) {
+        Point prev = pathPoints[i-1];
+        Point curr = pathPoints[i];
+        Point next = pathPoints[i+1];
+
+        Point vec1 = (curr - prev);  // Previous segment vector
+        Point vec2 = (next - curr);  // Current segment vector
+
+        double angle = angleBetween(vec1, vec2);
+        maxAngleChange = std::max(maxAngleChange, angle);
+    }
+
+    return maxAngleChange;
+}
+
+double calculatePathLengthFromNode(int nodeIndex) {
+    if (nodeIndex < 0 || nodeIndex >= nodes.size()) return 0.0;
+
+    double totalLength = 0.0;
+    int current = nodeIndex;
     int previous = -1;  // Track previous node to calculate segment distance
 
-    // Traverse from goal to start
+    // Traverse from the given node to the root
     while (true) {
         if (previous != -1) {
             // Add distance from current to previous node
@@ -222,6 +287,10 @@ double calculatePathLength() {
     }
 
     return totalLength;
+}
+
+double calculatePathLength() {
+    return calculatePathLengthFromNode(goalIndex);
 }
 
 void checkDestinationReached() {
@@ -244,48 +313,6 @@ double directionScore(Point from, Point to, Point direction) {
     if (magProduct < EPS) return -1.0; // Bad movement
 
     return dot / magProduct;  // Cosine: 1 = perfect, 0 = perpendicular, -1 = backwards
-}
-
-void rewire() {
-    int lastInserted = nodeCnt - 1;
-    for (auto nodeIndex : nearby) {
-        int par = lastInserted;
-        int cur = nodeIndex;
-
-        double previousPathLength = calculatePathLength();
-
-        double newCost = cost[par] + distance(nodes[par], nodes[cur]);
-
-        // Check edge and cost improvement, and enforce minimum path length
-        if (newCost + EPS < cost[cur] && isEdgeObstacleFree(nodes[par], nodes[cur])) {
-            // If a path has already been found, enforce a minimum path length to prevent cheating
-            if (pathFound) {
-                double currentBestPathLength = cost[goalIndex];
-                double minAllowedPathLength = 0.5 * currentBestPathLength;
-                
-                if (newCost < minAllowedPathLength) {
-                    continue; // Ignore paths that are too short (likely backward shortcuts)
-                }
-            }
-
-            // Save the original state before making changes
-            int originalParent = parent[cur];
-            double originalCost = cost[cur];
-            Point originalDirection = nodeDirection[cur];
-
-            parent[cur] = par;
-            cost[cur] = newCost;
-            nodeDirection[cur] = (nodes[cur] - nodes[par]).normalized();
-
-            double resultingPathLength = calculatePathLength(); // Manually calculate the new path length to avoid updating costs of the whole tree every rewire
-            if (resultingPathLength + EPS > previousPathLength) {
-                // If the new path is worse, revert changes
-                parent[cur] = originalParent; // Restore original parent
-                cost[cur] = originalCost;     // Restore original cost
-                nodeDirection[cur] = originalDirection; // Restore original direction
-            }
-        }
-    }
 }
 
 void simplifyPath() {
@@ -382,11 +409,28 @@ void RRT() {
 
         int par = nearestIndex;
         minCost = cost[par] + distance(nodes[par], nextPoint);
+
+        double costBefore = calculatePathLengthFromNode(par); // Calculate the cost of the path before rewiring
+
         for (auto nodeIndex : nearby) {
             double c = cost[nodeIndex] + distance(nodes[nodeIndex], nextPoint);
             if ((c - minCost) <= EPS) {
-                minCost = c;
-                par = nodeIndex;
+                parent.push_back(nodeIndex);
+                cost.push_back(c);
+                nodes.push_back(nextPoint);
+                nodeDirection.push_back((nextPoint - nodes[nodeIndex]).normalized());
+
+                double newPathLength = calculatePathLengthFromNode(nodeIndex); // Calculate the new path length from this node
+
+                if (newPathLength + EPS < costBefore) {
+                    minCost = c;
+                    par = nodeIndex; // Rewire to this node
+                }
+
+                parent.pop_back();
+                cost.pop_back();
+                nodes.pop_back();
+                nodeDirection.pop_back();
             }
         }
 
@@ -409,8 +453,6 @@ void RRT() {
             simplifyPath(); // Minor improvements, but worth it
             extractCurrentPath(); // We keep extracting the path in case it improves
         }
-
-        rewire(); // Use nearby nodes to find better connections
     }
 }
 
@@ -506,14 +548,16 @@ int main(int argc, char* argv[]) {
     // std::cout << "Average time per iteration: " << (duration / iterations) << " milliseconds.\n";
 
     std::cout << "RESULT,"
-          << "JumpSize=" << JUMP_SIZE << ","
-          << "DiskMultiplier=" << DISK_SIZE_MULTIPLIER << ","
-          << "RecentWindow=" << RECENT_NODES_WINDOW << ","
-          << "PathLength=" << calculatePathLength() << ","
-          << "RuntimeMs=" << duration << ","
-          << "AvgIterationTimeMs=" << (duration / iterations)
-          << std::endl;
+        << "JumpSize=" << JUMP_SIZE << ","
+        << "DiskMultiplier=" << DISK_SIZE_MULTIPLIER << ","
+        << "RecentWindow=" << RECENT_NODES_WINDOW << ","
+        << "PathLength=" << calculatePathLength() << ","
+        << "MaxAngleDeg=" << calculateMaxAngleChange() << ","
+        << "RuntimeMs=" << duration << ","
+        << "AvgIterationTimeMs=" << (duration / iterations)
+        << std::endl;
 
+    printPathAsVector(); // Print the path as a vector of points
 
     if (useWindow) {
         window.close();
