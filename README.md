@@ -34,8 +34,49 @@ Finally, execute the compiled program:
 
 ## The Executable
 
-Running the executable will open a window displaying the environment including the track, the start point and the finish line rectangle. 
+Running the executable will open a window displaying the environment including the track, the start point and the finish line rectangle.
+
+You can choose not to display this window by running:
+
+```bash
+./rrt -n
+```
 
 The RRT* algorithm will then begin to search for a path from the start point until it reaches the rectangle from the opposite side. The path tree will be displayed in real-time in white, and whenever a new path is found, it will be displayed in red. 
 
-The algorithm will continuously run until a certain number of iterations after the first path is found. The algorithm will also frequently print out the current path length and the number of iterations to the terminal.
+The algorithm will continuously run until a certain number of iterations after the first path is found. When the algorithm finishes, it will print many statistics that are then used by `run_tests.py` to generate graphs.
+
+## Running Tests
+
+Before everything, make sure you have all the python dependencies installed. You can either install them with pip or with apt:
+
+```bash
+pip install pandas
+```
+
+or
+
+```bash
+apt install python3-pandas
+```
+
+
+
+To run the tests, since the `rrt` executable is inside the `build` directory, you may need to grab the executable and place it in the root directory of the repository.
+Then, you can run the tests using the following command:
+
+```bash
+python3 run_tests.py
+```
+
+This will execute the algorithm multiple times with different parameters and generate a csv file with the results. The results will be saved into `rrt_test_results.csv` in the root directory of the repository.
+
+## Visualizing Results
+
+To visualize the results, you can use the `graph_ploting.py` script. This script will read the `rrt_test_results.csv` file and generate graphs for each parameter tested.
+
+These graphs will be saved in the `plots` directory in the root of the repository. You can run the script using the following command:
+
+```bash
+python3 graph_ploting.py
+```

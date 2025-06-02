@@ -29,15 +29,16 @@ const int FINISH_HEIGHT = 5;            // Height of the 'finish line' rectangle
 //      RECENT_NODES_WINDOW = 1       //
 ////////////////////////////////////////
 
-const double JUMP_SIZE = 3;                 // Maximum distance to jump towards a random point (larger values lead to faster exploration but less optimized paths)
-const double DISK_SIZE = JUMP_SIZE * 1;     // Circle radius around which we fetch nearby nodes to rewire (larger values lead to more optimized paths, but more execution time and may start going backwards)
+double JUMP_SIZE = 3;                 // Maximum distance to jump towards a random point (larger values lead to faster exploration but less optimized paths)
+int DISK_SIZE_MULTIPLIER = 1;         // Multiplier for the disk size, which is the radius around a node to search for nearby nodes to rewire
+double DISK_SIZE = JUMP_SIZE * DISK_SIZE_MULTIPLIER;     // Circle radius around which we fetch nearby nodes to rewire (larger values lead to more optimized paths, but more execution time and may start going backwards)
 
 const double CAR_WIDTH = 1.2;               // Width of the car for collision checks (resulting path is the midway path if car width is almost equal to the track width)
 const double CAR_LENGTH = 1.35;             // Length of the car for collision checks (if the length is too small, the car may face the wall and get stuck)
 
 const int EXTRA_ITERATIONS = 500;           // Extra iterations to keep exploring post success, possibly leading to better paths
 
-const int RECENT_NODES_WINDOW = 1;          // Number of furthest nodes to consider expanding, leads to more exploration but also more execution time
+int RECENT_NODES_WINDOW = 1;          // Number of furthest nodes to consider expanding, leads to more exploration but also more execution time
                                             // If this value is too low, the algorithm may get stuck facing a wall
 
 int iterations = 0;                         // Number of iterations
@@ -231,8 +232,8 @@ void checkDestinationReached() {
             return; // Ignore if the path is too short
         pathFound = true;
         goalIndex = nodeCnt - 1;
-        cout << "At " << iterations << " iterations:" << endl;
-        cout << "Found first path with a distance of " << calculatePathLength() << " units. " << endl << endl;
+        // cout << "At " << iterations << " iterations:" << endl;
+        // cout << "Found first path with a distance of " << calculatePathLength() << " units. " << endl << endl;
     }
 }
 
@@ -419,6 +420,24 @@ int main(int argc, char* argv[]) {
         useWindow = false;
     }
 
+    if (argc > 2) {
+        JUMP_SIZE = std::stod(argv[2]);
+        DISK_SIZE_MULTIPLIER = std::stod(argv[3]);
+        DISK_SIZE = JUMP_SIZE * DISK_SIZE_MULTIPLIER;
+        RECENT_NODES_WINDOW = std::stoi(argv[4]);
+        std::string trackName = argv[5];
+
+        // get the track
+        if (trackName == "track20") {
+            #include "tracks/track20.cpp"
+        } else if (trackName == "track1") {
+            #include "tracks/track1.cpp"
+        } else {
+            std::cerr << "Unknown track: " << trackName << "\n";
+            return 1;
+        }
+    }
+
     auto startTime = std::chrono::high_resolution_clock::now();
     int postGoalIterations = 0;
 
@@ -438,7 +457,7 @@ int main(int argc, char* argv[]) {
     parent.push_back(0);
     cost.push_back(0);
 
-    std::cout << "\nWelcome to RRT* Path Planning\n\n";
+    //std::cout << "\nWelcome to RRT* Path Planning\n\n";
 
     while (!useWindow || window.isOpen()) {
         if (useWindow) {
@@ -461,14 +480,14 @@ int main(int argc, char* argv[]) {
             }
         }
 
-        if (iterations % 300 == 0) {
-            std::cout << "Iterations: " << iterations << std::endl;
-            if (!pathFound)
-                std::cout << "Not reached yet :( \n";
-            else
-                std::cout << "Shortest distance till now: " << calculatePathLength() << " units.\n";
-            std::cout << std::endl;
-        }
+        // if (iterations % 300 == 0) {
+        //     std::cout << "Iterations: " << iterations << std::endl;
+        //     if (!pathFound)
+        //         std::cout << "Not reached yet :( \n";
+        //     else
+        //         std::cout << "Shortest distance till now: " << calculatePathLength() << " units.\n";
+        //     std::cout << std::endl;
+        // }
 
         if (useWindow) {
             window.clear();
@@ -480,11 +499,21 @@ int main(int argc, char* argv[]) {
     auto endTime = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
 
-    std::cout << "\nPath planning completed!\n";
-    std::cout << "Final path distance: " << calculatePathLength() << " units.\n";
-    std::cout << "Total runtime: " << duration << " milliseconds (" << duration / 1000.0 << " seconds).\n";
-    std::cout << "Total iterations: " << iterations << std::endl;
-    std::cout << "Average time per iteration: " << (duration / iterations) << " milliseconds.\n";
+    // std::cout << "\nPath planning completed!\n";
+    // std::cout << "Final path distance: " << calculatePathLength() << " units.\n";
+    // std::cout << "Total runtime: " << duration << " milliseconds (" << duration / 1000.0 << " seconds).\n";
+    // std::cout << "Total iterations: " << iterations << std::endl;
+    // std::cout << "Average time per iteration: " << (duration / iterations) << " milliseconds.\n";
+
+    std::cout << "RESULT,"
+          << "JumpSize=" << JUMP_SIZE << ","
+          << "DiskMultiplier=" << DISK_SIZE_MULTIPLIER << ","
+          << "RecentWindow=" << RECENT_NODES_WINDOW << ","
+          << "PathLength=" << calculatePathLength() << ","
+          << "RuntimeMs=" << duration << ","
+          << "AvgIterationTimeMs=" << (duration / iterations)
+          << std::endl;
+
 
     if (useWindow) {
         window.close();
