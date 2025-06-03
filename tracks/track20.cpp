@@ -1,6 +1,6 @@
 #include "../geometry.h"
 
-std::vector<Point> bluePoints = {
+std::vector<Point> track20_bluePoints = {
     {10.71, 1.15}, {14.90, 1.22}, {19.31, 1.62}, {23.59, 2.11}, {26.44, 2.22},
     {28.49, 2.00}, {30.07, 1.52}, {31.46, 0.77}, {32.73, -0.29}, {34.01, -1.87},
     {35.24, -4.11}, {36.46, -7.17}, {37.66, -11.06}, {38.88, -15.59}, {40.11, -20.39},
@@ -34,7 +34,7 @@ std::vector<Point> bluePoints = {
     {-16.57, 0.42}, {-11.60, 0.88}, {-7.10, 1.24}, {-2.61, 1.46}, {1.64, 1.49}
 };
 
-std::vector<Point> yellowPoints = {
+std::vector<Point> track20_yellowPoints = {
     {10.43, -1.85},
     {14.35, -1.81},
     {18.38, -1.50},
@@ -203,6 +203,6 @@ std::vector<Point> yellowPoints = {
     {1.33, -1.51}
 };
 
-vector<Point> car_start_points = {
+vector<Point> track20_car_start_points = {
     {0.0, 0.0}
 };

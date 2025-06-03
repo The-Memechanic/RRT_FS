@@ -2,15 +2,21 @@ import subprocess
 import itertools
 import csv
 import os
+import shutil
 
 # Parameter ranges
 jump_sizes = [2.0, 3.0, 4.0, 5.0]
 disk_multipliers = [1.0, 2.0, 3.0]
 recent_windows = [3, 5, 7, 10]
-track_names = ["track1", "track20"]
+track_names = ["track1", "track20", "FSG23"]
 
 results = []
 output_folder = "final_paths"
+
+# Delete the folder
+if os.path.exists(output_folder):
+    shutil.rmtree(output_folder)
+
 os.makedirs(output_folder, exist_ok=True)
 
 path_id_counter = 1  # Start path IDs at 1

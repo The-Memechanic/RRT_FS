@@ -5,7 +5,9 @@
 #include <SFML/Graphics.hpp>
 #include "geometry.h"
 
-#include "tracks/track20.cpp" // Track to be used
+#include "tracks/track20.cpp"
+#include "tracks/track1.cpp"
+#include "tracks/FSG23.cpp"
 
 using namespace std;
 
@@ -29,7 +31,7 @@ const int FINISH_HEIGHT = 5;            // Height of the 'finish line' rectangle
 //      RECENT_NODES_WINDOW = 1       //
 ////////////////////////////////////////
 
-double JUMP_SIZE = 3;                 // Maximum distance to jump towards a random point (larger values lead to faster exploration but less optimized paths)
+double JUMP_SIZE = 2;                 // Maximum distance to jump towards a random point (larger values lead to faster exploration but less optimized paths)
 int DISK_SIZE_MULTIPLIER = 3;         // Multiplier for the disk size, which is the radius around a node to search for nearby nodes to rewire
 double DISK_SIZE = JUMP_SIZE * DISK_SIZE_MULTIPLIER;     // Circle radius around which we fetch nearby nodes to rewire (larger values lead to more optimized paths, but more execution time and may start going backwards)
 
@@ -38,7 +40,7 @@ const double CAR_LENGTH = 1.35;             // Length of the car for collision c
 
 const int EXTRA_ITERATIONS = 500;           // Extra iterations to keep exploring post success, possibly leading to better paths
 
-int RECENT_NODES_WINDOW = 10;          // Number of furthest nodes to consider expanding, leads to more exploration but also more execution time
+int RECENT_NODES_WINDOW = 5;          // Number of furthest nodes to consider expanding, leads to more exploration but also more execution time
                                             // If this value is too low, the algorithm may get stuck facing a wall
 
 int iterations = 0;                         // Number of iterations
@@ -57,6 +59,8 @@ bool pathFound = false;
 Track track;
 Point startDirection = {1.0, 0.0};  // Facing right initially I assume
 vector<Point> nodeDirection;        // Stores direction of each node
+
+vector<Point> bluePoints, yellowPoints, car_start_points;
 
 void initializeTrack() {
     // Initialize the track with blue and yellow cones
@@ -456,6 +460,7 @@ void RRT() {
     }
 }
 
+
 int main(int argc, char* argv[]) {
     bool useWindow = true;
     if (argc > 1 && (std::string(argv[1]) == "-n" || std::string(argv[1]) == "--no-window")) {
@@ -471,16 +476,25 @@ int main(int argc, char* argv[]) {
 
         // get the track
         if (trackName == "track20") {
-            #include "tracks/track20.cpp"
+            bluePoints = track20_bluePoints;
+            yellowPoints = track20_yellowPoints;
+            car_start_points = track20_car_start_points;
         } else if (trackName == "track1") {
-            #include "tracks/track1.cpp"
+            bluePoints = track1_bluePoints;
+            yellowPoints = track1_yellowPoints;
+            car_start_points = track1_car_start_points;
+        } else if (trackName == "FSG23") {
+            bluePoints = FSG23_bluePoints;
+            yellowPoints = FSG23_yellowPoints;
+            car_start_points = FSG23_car_start_points;
         } else {
             std::cerr << "Unknown track: " << trackName << "\n";
-            return 1;
+            exit(1);
         }
     }
 
     auto startTime = std::chrono::high_resolution_clock::now();
+    bool timeoutOccurred = false;
     int postGoalIterations = 0;
 
     initializeTrack();
@@ -502,6 +516,16 @@ int main(int argc, char* argv[]) {
     //std::cout << "\nWelcome to RRT* Path Planning\n\n";
 
     while (!useWindow || window.isOpen()) {
+
+        auto currentTime = std::chrono::high_resolution_clock::now();
+        auto elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - startTime).count();
+
+        // Check if 2 minutes (120,000 ms) have passed
+        if (elapsedMs >= 60000) {
+            timeoutOccurred = true;
+            break;
+        }
+
         if (useWindow) {
             sf::Event event{};
             while (window.pollEvent(event)) {
@@ -547,17 +571,31 @@ int main(int argc, char* argv[]) {
     // std::cout << "Total iterations: " << iterations << std::endl;
     // std::cout << "Average time per iteration: " << (duration / iterations) << " milliseconds.\n";
 
-    std::cout << "RESULT,"
-        << "JumpSize=" << JUMP_SIZE << ","
-        << "DiskMultiplier=" << DISK_SIZE_MULTIPLIER << ","
-        << "RecentWindow=" << RECENT_NODES_WINDOW << ","
-        << "PathLength=" << calculatePathLength() << ","
-        << "MaxAngleDeg=" << calculateMaxAngleChange() << ","
-        << "RuntimeMs=" << duration << ","
-        << "AvgIterationTimeMs=" << (duration / iterations)
-        << std::endl;
+    if (!timeoutOccurred) {
+        std::cout << "RESULT,"
+            << "JumpSize=" << JUMP_SIZE << ","
+            << "DiskMultiplier=" << DISK_SIZE_MULTIPLIER << ","
+            << "RecentWindow=" << RECENT_NODES_WINDOW << ","
+            << "PathLength=" << calculatePathLength() << ","
+            << "MaxAngleDeg=" << calculateMaxAngleChange() << ","
+            << "RuntimeMs=" << duration << ","
+            << "AvgIterationTimeMs=" << (duration / iterations)
+            << std::endl;
 
-    printPathAsVector(); // Print the path as a vector of points
+        printPathAsVector(); // Print the path as a vector of points
+    } else {
+        std::cout << "RESULT,"
+            << "JumpSize=" << JUMP_SIZE << ","
+            << "DiskMultiplier=" << DISK_SIZE_MULTIPLIER << ","
+            << "RecentWindow=" << RECENT_NODES_WINDOW << ","
+            << "PathLength=" << 0.0 << ","
+            << "MaxAngleDeg=" << 0.0 << ","
+            << "RuntimeMs=" << 0.0 << ","
+            << "AvgIterationTimeMs=" << 0.0
+            << std::endl;
+
+        std::cout << "PATH_VECTOR: vector<Point> pathPoints = { {0, 0} };" << std::endl;
+    }
 
     if (useWindow) {
         window.close();
