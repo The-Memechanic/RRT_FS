@@ -463,34 +463,50 @@ void RRT() {
 
 int main(int argc, char* argv[]) {
     bool useWindow = true;
-    if (argc > 1 && (std::string(argv[1]) == "-n" || std::string(argv[1]) == "--no-window")) {
-        useWindow = false;
+    bool defaultCheck = false;
+    int offset = 0;
+
+    if (argc > 1) {
+        if (std::string(argv[1]) == "-n" || std::string(argv[1]) == "--no-window") {
+            useWindow = false;
+            offset = 1;
+        }
+
+        if (argc > 2) {
+            JUMP_SIZE = std::stod(argv[1 + offset]);
+            DISK_SIZE_MULTIPLIER = std::stod(argv[2 + offset]);
+            DISK_SIZE = JUMP_SIZE * DISK_SIZE_MULTIPLIER;
+            RECENT_NODES_WINDOW = std::stoi(argv[3 + offset]);
+            std::string trackName = argv[4 + offset];
+
+            // get the track
+            if (trackName == "track20") {
+                bluePoints = track20_bluePoints;
+                yellowPoints = track20_yellowPoints;
+                car_start_points = track20_car_start_points;
+            } else if (trackName == "track1") {
+                bluePoints = track1_bluePoints;
+                yellowPoints = track1_yellowPoints;
+                car_start_points = track1_car_start_points;
+            } else if (trackName == "FSG23") {
+                bluePoints = FSG23_bluePoints;
+                yellowPoints = FSG23_yellowPoints;
+                car_start_points = FSG23_car_start_points;
+            } else {
+                std::cerr << "Unknown track: " << trackName << "\n";
+                exit(1);
+            }
+        } else {
+            defaultCheck = true;
+        }
+    } else {
+        defaultCheck = true;
     }
 
-    if (argc > 2) {
-        JUMP_SIZE = std::stod(argv[2]);
-        DISK_SIZE_MULTIPLIER = std::stod(argv[3]);
-        DISK_SIZE = JUMP_SIZE * DISK_SIZE_MULTIPLIER;
-        RECENT_NODES_WINDOW = std::stoi(argv[4]);
-        std::string trackName = argv[5];
-
-        // get the track
-        if (trackName == "track20") {
-            bluePoints = track20_bluePoints;
-            yellowPoints = track20_yellowPoints;
-            car_start_points = track20_car_start_points;
-        } else if (trackName == "track1") {
-            bluePoints = track1_bluePoints;
-            yellowPoints = track1_yellowPoints;
-            car_start_points = track1_car_start_points;
-        } else if (trackName == "FSG23") {
-            bluePoints = FSG23_bluePoints;
-            yellowPoints = FSG23_yellowPoints;
-            car_start_points = FSG23_car_start_points;
-        } else {
-            std::cerr << "Unknown track: " << trackName << "\n";
-            exit(1);
-        }
+    if (defaultCheck) {                     // Default track when no arguments are provided
+        bluePoints = FSG23_bluePoints;
+        yellowPoints = FSG23_yellowPoints;
+        car_start_points = FSG23_car_start_points;
     }
 
     auto startTime = std::chrono::high_resolution_clock::now();
