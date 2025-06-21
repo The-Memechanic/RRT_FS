@@ -35,10 +35,10 @@ double JUMP_SIZE = 2;                 // Maximum distance to jump towards a rand
 int DISK_SIZE_MULTIPLIER = 3;         // Multiplier for the disk size, which is the radius around a node to search for nearby nodes to rewire
 double DISK_SIZE = JUMP_SIZE * DISK_SIZE_MULTIPLIER;     // Circle radius around which we fetch nearby nodes to rewire (larger values lead to more optimized paths, but more execution time and may start going backwards)
 
-const double CAR_WIDTH = 1.2;               // Width of the car for collision checks (resulting path is the midway path if car width is almost equal to the track width)
+const double CAR_WIDTH = 2.92;               // Width of the car for collision checks (resulting path is the midway path if car width is almost equal to the track width)
 const double CAR_LENGTH = 1.35;             // Length of the car for collision checks (if the length is too small, the car may face the wall and get stuck)
 
-const int EXTRA_ITERATIONS = 500;           // Extra iterations to keep exploring post success, possibly leading to better paths
+const int EXTRA_ITERATIONS = 100;           // Extra iterations to keep exploring post success, possibly leading to better paths
 
 int RECENT_NODES_WINDOW = 5;          // Number of furthest nodes to consider expanding, leads to more exploration but also more execution time
                                             // If this value is too low, the algorithm may get stuck facing a wall
@@ -534,10 +534,10 @@ int main(int argc, char* argv[]) {
     while (!useWindow || window.isOpen()) {
 
         auto currentTime = std::chrono::high_resolution_clock::now();
-        auto elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - startTime).count();
+        auto elapsedMs = std::chrono::duration_cast<std::chrono::microseconds>(currentTime - startTime).count();
 
-        // Check if 2 minutes (120,000 ms) have passed
-        if (elapsedMs >= 60000) {
+        // Check if 1 minute has passed
+        if (elapsedMs >= 60000000) {
             timeoutOccurred = true;
             break;
         }
@@ -579,7 +579,7 @@ int main(int argc, char* argv[]) {
     }
 
     auto endTime = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime).count();
 
     // std::cout << "\nPath planning completed!\n";
     // std::cout << "Final path distance: " << calculatePathLength() << " units.\n";
@@ -594,8 +594,8 @@ int main(int argc, char* argv[]) {
             << "RecentWindow=" << RECENT_NODES_WINDOW << ","
             << "PathLength=" << calculatePathLength() << ","
             << "MaxAngleDeg=" << calculateMaxAngleChange() << ","
-            << "RuntimeMs=" << duration << ","
-            << "AvgIterationTimeMs=" << (duration / iterations)
+            << "RuntimeUs=" << duration << ","
+            << "AvgIterationTimeUs=" << (duration / iterations)
             << std::endl;
 
         printPathAsVector(); // Print the path as a vector of points
@@ -606,8 +606,8 @@ int main(int argc, char* argv[]) {
             << "RecentWindow=" << RECENT_NODES_WINDOW << ","
             << "PathLength=" << 0.0 << ","
             << "MaxAngleDeg=" << 0.0 << ","
-            << "RuntimeMs=" << 0.0 << ","
-            << "AvgIterationTimeMs=" << 0.0
+            << "RuntimeUs=" << 0.0 << ","
+            << "AvgIterationTimeUs=" << 0.0
             << std::endl;
 
         std::cout << "PATH_VECTOR: vector<Point> pathPoints = { {0, 0} };" << std::endl;

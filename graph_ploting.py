@@ -2,26 +2,36 @@ import os
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+import shutil
 
 # Load data
 df = pd.read_csv("rrt_test_results.csv")
 
-# Set style
-sns.set_theme(style="whitegrid")
+# Convert runtime values to milliseconds
+df["RuntimeMs"] = df["RuntimeUs"] / 1000.0
 
-# Ensure data types
+# Ensure proper data types
 df["JumpSize"] = df["JumpSize"].astype(float)
 df["DiskMultiplier"] = df["DiskMultiplier"].astype(float)
 df["RecentWindow"] = df["RecentWindow"].astype(int)
 
-# Pick constant values (median) for other parameters
+# Set style
+sns.set_theme(style="whitegrid")
+
+# Constants for filtering
 constant_diskmult = 2
 constant_jump = 3
 constant_recent = 5
 
-# Create folder for plots if it doesn't exist
 output_folder = "plots"
+
+# Delete the previous outputs first
+if os.path.exists(output_folder):
+    shutil.rmtree(output_folder)
+
+# Then recreate the folder
 os.makedirs(output_folder, exist_ok=True)
+
 
 def filter_df(variable, track):
     if variable == "JumpSize":
@@ -37,118 +47,87 @@ def filter_df(variable, track):
                   (df["DiskMultiplier"] == constant_diskmult) &
                   (df["Track"] == track)]
 
+def plot_with_mean(data, x, y, title, ylabel, filename, color=None):
+    data = data.copy()
+    data[x] = pd.to_numeric(data[x], errors='coerce')
+    data = data.dropna(subset=[x, y])
+    data = data.sort_values(by=x)
+
+    plt.figure(figsize=(10, 6))
+
+    # Scatterplot for the individual points (respects numeric x)
+    sns.scatterplot(data=data, x=x, y=y, color="gray", alpha=0.4)
+
+    # Lineplot for the mean line
+    sns.lineplot(data=data, x=x, y=y, errorbar='ci', marker="o", color=color)
+
+    plt.title(title)
+    plt.ylabel(ylabel)
+    plt.xlabel(x)
+    plt.tight_layout()
+    plt.savefig(os.path.join(output_folder, filename))
+    plt.close()
+
+
+
 for track in df["Track"].unique():
     # --- JumpSize plots ---
     df_jump = filter_df("JumpSize", track)
-    # Runtime
-    plt.figure(figsize=(10, 6))
-    sns.lineplot(data=df_jump, x="JumpSize", y="RuntimeMs", marker="o")
-    plt.title(f"Runtime vs JumpSize (DiskMultiplier={constant_diskmult}, RecentWindow={constant_recent}, Track={track})")
-    plt.ylabel("Runtime (ms)")
-    plt.savefig(os.path.join(output_folder, f"runtime_vs_jump_{track}.png"))
-    plt.close()
+    plot_with_mean(df_jump, "JumpSize", "RuntimeMs",
+                   f"Runtime vs JumpSize (DiskMultiplier={constant_diskmult}, RecentWindow={constant_recent}, Track={track})",
+                   "Runtime (ms)", f"runtime_vs_jump_{track}.png")
 
-    # AvgIterationTime
-    plt.figure(figsize=(10, 6))
-    sns.lineplot(data=df_jump, x="JumpSize", y="AvgIterationTimeMs", marker="o", color="orange")
-    plt.title(f"Avg Iteration Time vs JumpSize (DiskMultiplier={constant_diskmult}, RecentWindow={constant_recent}, Track={track})")
-    plt.ylabel("Avg Iteration Time (ms)")
-    plt.savefig(os.path.join(output_folder, f"avg_iter_time_vs_jump_{track}.png"))
-    plt.close()
+    plot_with_mean(df_jump, "JumpSize", "AvgIterationTimeUs",
+                   f"Avg Iteration Time vs JumpSize (DiskMultiplier={constant_diskmult}, RecentWindow={constant_recent}, Track={track})",
+                   "Avg Iteration Time (us)", f"avg_iter_time_vs_jump_{track}.png", color="orange")
 
-    # Path Length
-    plt.figure(figsize=(10, 6))
-    sns.lineplot(data=df_jump, x="JumpSize", y="PathLength", marker="o", color="green")
-    plt.title(f"Path Length vs JumpSize (DiskMultiplier={constant_diskmult}, RecentWindow={constant_recent}, Track={track})")
-    plt.ylabel("Path Length")
-    plt.savefig(os.path.join(output_folder, f"pathlength_vs_jump_{track}.png"))
-    plt.close()
+    plot_with_mean(df_jump, "JumpSize", "PathLength",
+                   f"Path Length vs JumpSize (DiskMultiplier={constant_diskmult}, RecentWindow={constant_recent}, Track={track})",
+                   "Path Length", f"pathlength_vs_jump_{track}.png", color="green")
 
-    # Max Angle
-    plt.figure(figsize=(10, 6))
-    sns.lineplot(data=df_jump, x="JumpSize", y="MaxAngleDeg", marker="o", color="purple")
-    plt.title(f"Max Angle vs JumpSize (DiskMultiplier={constant_diskmult}, RecentWindow={constant_recent}, Track={track})")
-    plt.ylabel("Max Angle (degrees)")
-    plt.savefig(os.path.join(output_folder, f"max_angle_vs_jump_{track}.png"))
-    plt.close()
+    plot_with_mean(df_jump, "JumpSize", "MaxAngleDeg",
+                   f"Max Angle vs JumpSize (DiskMultiplier={constant_diskmult}, RecentWindow={constant_recent}, Track={track})",
+                   "Max Angle (degrees)", f"max_angle_vs_jump_{track}.png", color="purple")
 
     # --- DiskMultiplier plots ---
     df_disk = filter_df("DiskMultiplier", track)
-    # Runtime
-    plt.figure(figsize=(10, 6))
-    sns.lineplot(data=df_disk, x="DiskMultiplier", y="RuntimeMs", marker="o")
-    plt.title(f"Runtime vs DiskMultiplier (JumpSize={constant_jump}, RecentWindow={constant_recent}, Track={track})")
-    plt.ylabel("Runtime (ms)")
-    plt.savefig(os.path.join(output_folder, f"runtime_vs_diskmult_{track}.png"))
-    plt.close()
+    plot_with_mean(df_disk, "DiskMultiplier", "RuntimeMs",
+                   f"Runtime vs DiskMultiplier (JumpSize={constant_jump}, RecentWindow={constant_recent}, Track={track})",
+                   "Runtime (ms)", f"runtime_vs_diskmult_{track}.png")
 
-    # AvgIterationTime
-    plt.figure(figsize=(10, 6))
-    sns.lineplot(data=df_disk, x="DiskMultiplier", y="AvgIterationTimeMs", marker="o", color="orange")
-    plt.title(f"Avg Iteration Time vs DiskMultiplier (JumpSize={constant_jump}, RecentWindow={constant_recent}, Track={track})")
-    plt.ylabel("Avg Iteration Time (ms)")
-    plt.savefig(os.path.join(output_folder, f"avg_iter_time_vs_diskmult_{track}.png"))
-    plt.close()
+    plot_with_mean(df_disk, "DiskMultiplier", "AvgIterationTimeUs",
+                   f"Avg Iteration Time vs DiskMultiplier (JumpSize={constant_jump}, RecentWindow={constant_recent}, Track={track})",
+                   "Avg Iteration Time (us)", f"avg_iter_time_vs_diskmult_{track}.png", color="orange")
 
-    # Path Length
-    plt.figure(figsize=(10, 6))
-    sns.lineplot(data=df_disk, x="DiskMultiplier", y="PathLength", marker="o", color="green")
-    plt.title(f"Path Length vs DiskMultiplier (JumpSize={constant_jump}, RecentWindow={constant_recent}, Track={track})")
-    plt.ylabel("Path Length")
-    plt.savefig(os.path.join(output_folder, f"pathlength_vs_diskmult_{track}.png"))
-    plt.close()
+    plot_with_mean(df_disk, "DiskMultiplier", "PathLength",
+                   f"Path Length vs DiskMultiplier (JumpSize={constant_jump}, RecentWindow={constant_recent}, Track={track})",
+                   "Path Length", f"pathlength_vs_diskmult_{track}.png", color="green")
 
-    # Max Angle
-    plt.figure(figsize=(10, 6))
-    sns.lineplot(data=df_disk, x="DiskMultiplier", y="MaxAngleDeg", marker="o", color="purple")
-    plt.title(f"Max Angle vs DiskMultiplier (JumpSize={constant_jump}, RecentWindow={constant_recent}, Track={track})")
-    plt.ylabel("Max Angle (degrees)")
-    plt.savefig(os.path.join(output_folder, f"max_angle_vs_diskmult_{track}.png"))
-    plt.close()
+    plot_with_mean(df_disk, "DiskMultiplier", "MaxAngleDeg",
+                   f"Max Angle vs DiskMultiplier (JumpSize={constant_jump}, RecentWindow={constant_recent}, Track={track})",
+                   "Max Angle (degrees)", f"max_angle_vs_diskmult_{track}.png", color="purple")
 
     # --- RecentWindow plots ---
     df_recent = filter_df("RecentWindow", track)
-    # Runtime
-    plt.figure(figsize=(10, 6))
-    sns.lineplot(data=df_recent, x="RecentWindow", y="RuntimeMs", marker="o")
-    plt.title(f"Runtime vs RecentWindow (JumpSize={constant_jump}, DiskMultiplier={constant_diskmult}, Track={track})")
-    plt.ylabel("Runtime (ms)")
-    plt.savefig(os.path.join(output_folder, f"runtime_vs_recentwindow_{track}.png"))
-    plt.close()
+    plot_with_mean(df_recent, "RecentWindow", "RuntimeMs",
+                   f"Runtime vs RecentWindow (JumpSize={constant_jump}, DiskMultiplier={constant_diskmult}, Track={track})",
+                   "Runtime (ms)", f"runtime_vs_recentwindow_{track}.png")
 
-    # AvgIterationTime
-    plt.figure(figsize=(10, 6))
-    sns.lineplot(data=df_recent, x="RecentWindow", y="AvgIterationTimeMs", marker="o", color="orange")
-    plt.title(f"Avg Iteration Time vs RecentWindow (JumpSize={constant_jump}, DiskMultiplier={constant_diskmult}, Track={track})")
-    plt.ylabel("Avg Iteration Time (ms)")
-    plt.savefig(os.path.join(output_folder, f"avg_iter_time_vs_recentwindow_{track}.png"))
-    plt.close()
+    plot_with_mean(df_recent, "RecentWindow", "AvgIterationTimeUs",
+                   f"Avg Iteration Time vs RecentWindow (JumpSize={constant_jump}, DiskMultiplier={constant_diskmult}, Track={track})",
+                   "Avg Iteration Time (us)", f"avg_iter_time_vs_recentwindow_{track}.png", color="orange")
 
-    # Path Length
-    plt.figure(figsize=(10, 6))
-    sns.lineplot(data=df_recent, x="RecentWindow", y="PathLength", marker="o", color="green")
-    plt.title(f"Path Length vs RecentWindow (JumpSize={constant_jump}, DiskMultiplier={constant_diskmult}, Track={track})")
-    plt.ylabel("Path Length")
-    plt.savefig(os.path.join(output_folder, f"pathlength_vs_recentwindow_{track}.png"))
-    plt.close()
+    plot_with_mean(df_recent, "RecentWindow", "PathLength",
+                   f"Path Length vs RecentWindow (JumpSize={constant_jump}, DiskMultiplier={constant_diskmult}, Track={track})",
+                   "Path Length", f"pathlength_vs_recentwindow_{track}.png", color="green")
 
-    # Max Angle
-    plt.figure(figsize=(10, 6))
-    sns.lineplot(data=df_recent, x="RecentWindow", y="MaxAngleDeg", marker="o", color="purple")
-    plt.title(f"Max Angle vs RecentWindow (JumpSize={constant_jump}, DiskMultiplier={constant_diskmult}, Track={track})")
-    plt.ylabel("Max Angle (degrees)")
-    plt.savefig(os.path.join(output_folder, f"max_angle_vs_recentwindow_{track}.png"))
-    plt.close()
+    plot_with_mean(df_recent, "RecentWindow", "MaxAngleDeg",
+                   f"Max Angle vs RecentWindow (JumpSize={constant_jump}, DiskMultiplier={constant_diskmult}, Track={track})",
+                   "Max Angle (degrees)", f"max_angle_vs_recentwindow_{track}.png", color="purple")
 
-# Find the best paths
-best_paths = df.loc[df.groupby("Track")["PathLength"].idxmin(), ["Track", "PathLength", "PathFile"]]
+# Best paths
+best_paths = df.loc[df.groupby("Track")["PathLength"].idxmin(), ["Track", "PathLength", "PathFile"]].reset_index(drop=True)
 
-best_paths = best_paths.reset_index(drop=True)
-
-
-# Print to console
 print("Best path per track (shortest PathLength):")
 print(best_paths)
-
-
 print(f"Plots saved successfully in folder '{output_folder}'.")
