@@ -35,10 +35,10 @@ double JUMP_SIZE = 2;                 // Maximum distance to jump towards a rand
 int DISK_SIZE_MULTIPLIER = 3;         // Multiplier for the disk size, which is the radius around a node to search for nearby nodes to rewire
 double DISK_SIZE = JUMP_SIZE * DISK_SIZE_MULTIPLIER;     // Circle radius around which we fetch nearby nodes to rewire (larger values lead to more optimized paths, but more execution time and may start going backwards)
 
-const double CAR_WIDTH = 2.92;               // Width of the car for collision checks (resulting path is the midway path if car width is almost equal to the track width)
+const double CAR_WIDTH = 1.2;               // Width of the car for collision checks (resulting path is the midway path if car width is almost equal to the track width)
 const double CAR_LENGTH = 1.35;             // Length of the car for collision checks (if the length is too small, the car may face the wall and get stuck)
 
-const int EXTRA_ITERATIONS = 100;           // Extra iterations to keep exploring post success, possibly leading to better paths
+const int EXTRA_ITERATIONS = 500;           // Extra iterations to keep exploring post success, possibly leading to better paths
 
 int RECENT_NODES_WINDOW = 5;          // Number of furthest nodes to consider expanding, leads to more exploration but also more execution time
                                             // If this value is too low, the algorithm may get stuck facing a wall
@@ -504,9 +504,9 @@ int main(int argc, char* argv[]) {
     }
 
     if (defaultCheck) {                     // Default track when no arguments are provided
-        bluePoints = FSG23_bluePoints;
-        yellowPoints = FSG23_yellowPoints;
-        car_start_points = FSG23_car_start_points;
+        bluePoints = track20_bluePoints;
+        yellowPoints = track20_yellowPoints;
+        car_start_points = track20_car_start_points;
     }
 
     auto startTime = std::chrono::high_resolution_clock::now();
